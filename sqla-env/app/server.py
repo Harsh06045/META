@@ -204,7 +204,23 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 }
 .query-card::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0;background:linear-gradient(180deg,var(--accent),#4338ca);opacity:0;transition:opacity .2s}
 .query-card:hover{border-color:rgba(91,106,240,.35);box-shadow:0 6px 20px rgba(91,106,240,.12);transform:translateY(-2px)}
-.query-card:hover::after{opacity:1}
+.query-card.scanning{
+  border-color:var(--accent);
+  box-shadow:0 0 15px rgba(91,106,240,.3);
+  animation:scanPulse 1.5s ease-in-out infinite;
+}
+@keyframes scanPulse{
+  0%{box-shadow:0 0 5px rgba(91,106,240,.2)}
+  50%{box-shadow:0 0 15px rgba(91,106,240,.4);background:rgba(91,106,240,.05)}
+  100%{box-shadow:0 0 5px rgba(91,106,240,.2)}
+}
+.query-card.scanning .qc-id{color:var(--text);font-weight:700}
+.qc-badge-scan{
+  padding:2px 6px;border-radius:4px;font-size:.6rem;font-weight:700;
+  background:rgba(91,106,240,.2);color:var(--accent);
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{80%{opacity:0}}
 .query-card.active{border-color:var(--accent);background:rgba(91,106,240,.07);box-shadow:0 0 0 1px rgba(91,106,240,.2),0 6px 24px rgba(91,106,240,.18)}
 .query-card.active::after{opacity:1}
 .query-card.done{border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.02)}
@@ -821,25 +837,51 @@ async function runSecurityScan(){
   const b = document.getElementById('scanBar');
   const t = document.getElementById('scanTarget');
   s.classList.add('open');
+  log('SYS', 'Initializing Neural Security Audit Engine...', 'STEP');
   
+  const cards = document.querySelectorAll('#queryGrid .query-card');
   const qs = curObs?.queries || [];
+  
   for(let i=0; i<qs.length; i++){
     const p = ((i+1)/qs.length)*100;
     b.style.width = p+'%';
-    t.textContent = `AUDITING BLOB [0x${i.toString(16).toUpperCase()}]: ${qs[i].substring(0,35)}...`;
+    t.textContent = `ANALYZING BLOCK ${i}...`;
+    
+    // UI Interaction: Highlight card being scanned
+    if(cards[i]){
+      cards[i].classList.add('scanning');
+      cards[i].scrollIntoView({behavior:'smooth',block:'center'});
+      const badge = cards[i].querySelector('.badge');
+      if(badge) {
+        badge.textContent = 'SCANNING...';
+        badge.className = 'badge b-pend';
+      }
+    }
     
     const sql = qs[i].toLowerCase();
     if(sql.includes('\' or \'1\'=\'1') || sql.includes('drop table') || sql.includes('union select')){
-      log('WARN', `Vulnerability detected at index ${i}`, 'WARN');
-      toast(`⚠️ RISK: SQL Injection at ID ${i}`, '#f87171');
+      log('WARN', `VULNERABILITY DETECTED [IDX:${i}]: Pattern matches SQL_INJECTION_V1`, 'WARN');
+      toast(`🚨 CRITICAL: SQL Injection Found`, '#f87171');
+      if(cards[i]) cards[i].style.borderLeft = '3px solid #f87171';
+    } else {
+      log('SYS', `Query ${i} integrity verified.`, 'STEP');
     }
-    await new Promise(r=>setTimeout(r, 150 + Math.random()*200));
+    
+    await new Promise(r=>setTimeout(r, 200 + Math.random()*300));
+    if(cards[i]) {
+      cards[i].classList.remove('scanning');
+      const badge = cards[i].querySelector('.badge');
+      if(badge) {
+        badge.textContent = 'SCANNED';
+        badge.className = 'badge b-done';
+      }
+    }
   }
   
   setTimeout(()=>{
     s.classList.remove('open');
-    toast('✅ Automated security scan complete!', '#34d399');
-    log('SYS', 'Global Security Scan finished. All vulnerabilities flagged.', 'STEP');
+    toast('✅ Neural security audit complete!', '#34d399');
+    log('SYS', 'Global Security Scan finished. System report archived.', 'STEP');
     showView('queries');
   }, 500);
 }
