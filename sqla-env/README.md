@@ -1,17 +1,10 @@
 ---
-title: SQLAudit-Env
-emoji: 🛡️
-colorFrom: indigo
-colorTo: blue
+title: sqla-env
+emoji: 💼
+colorFrom: blue
+colorTo: indigo
 sdk: docker
 app_port: 7860
-tags:
-  - openenv
-  - sql
-  - security
-  - database
-  - rl-environment
-  - fastapi
 pinned: false
 ---
 # SQLAudit-Env 🔍
