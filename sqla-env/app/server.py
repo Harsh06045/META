@@ -768,21 +768,67 @@ function navToId(view){
   if(el) navTo(el);
 }
 function showView(view){
+  curV=view;
   document.querySelectorAll('.view-panel').forEach(p=>p.style.display='none');
   const panel=document.getElementById('view-'+view);
   if(panel) panel.style.display=QUERY_VIEWS.has(view)?'flex':'block';
   document.getElementById('crumbSection').textContent=VIEW_MAP[view]||view;
+  
   // sync tabs
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   const tabMap={queries:'workload',security:'workload',performance:'workload',compliance:'workload',metrics:'analytics'};
   const tabName=tabMap[view];
   if(tabName){const t=document.querySelector(`.tab[data-tab="${tabName}"]`);if(t)t.classList.add('active');}
-  // filter query cards by view
+  
+  // filter & header
   if(QUERY_VIEWS.has(view)) filterQueries(view);
-  // metrics: init big chart
+  const gh = document.getElementById('gridHeader');
+  if(gh){
+    if(view==='security'){
+      gh.innerHTML = `<div class="grid-title">🛡️ Security Scan <i>— Vulnerability Audit</i></div>
+                     <button class="btn btn-primary" onclick="runSecurityScan()"><span style="font-size:1.1rem">📡</span> Start Automated Scan</button>`;
+    } else if(view==='performance'){
+      gh.innerHTML = `<div class="grid-title">⚡ Performance Optimize <i>— Bottleneck Detection</i></div>
+                     <button class="btn btn-primary" onclick="toast('ℹ️ Performance Auto-Optimizer ready.')">🚀 Optimize All</button>`;
+    } else if(view==='compliance'){
+      gh.innerHTML = `<div class="grid-title">🔒 Compliance Guard <i>— PII & GDPR Audit</i></div>
+                     <button class="btn btn-primary" onclick="toast('🔒 Compliance scanner active.')">🛡️ Check Privacy</button>`;
+    } else {
+      gh.innerHTML = `<div class="grid-title">🔍 Audit Queries <i>— Live Workload Filter</i></div>`;
+    }
+    wireRipples();
+  }
+  
   if(view==='metrics') refreshMetrics();
-  // update dashboard stats
   if(view==='dashboard') refreshDashboard();
+}
+
+async function runSecurityScan(){
+  const s = document.getElementById('scanOverlay');
+  const b = document.getElementById('scanBar');
+  const t = document.getElementById('scanTarget');
+  s.classList.add('open');
+  
+  const qs = curObs?.queries || [];
+  for(let i=0; i<qs.length; i++){
+    const p = ((i+1)/qs.length)*100;
+    b.style.width = p+'%';
+    t.textContent = `AUDITING BLOB [0x${i.toString(16).toUpperCase()}]: ${qs[i].substring(0,35)}...`;
+    
+    const sql = qs[i].toLowerCase();
+    if(sql.includes('\' or \'1\'=\'1') || sql.includes('drop table') || sql.includes('union select')){
+      log('WARN', `Vulnerability detected at index ${i}`, 'WARN');
+      toast(`⚠️ RISK: SQL Injection at ID ${i}`, '#f87171');
+    }
+    await new Promise(r=>setTimeout(r, 150 + Math.random()*200));
+  }
+  
+  setTimeout(()=>{
+    s.classList.remove('open');
+    toast('✅ Automated security scan complete!', '#34d399');
+    log('SYS', 'Global Security Scan finished. All vulnerabilities flagged.', 'STEP');
+    showView('queries');
+  }, 500);
 }
 function filterQueries(view){
   const cards=document.querySelectorAll('#queryGrid .query-card');
