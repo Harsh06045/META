@@ -336,13 +336,29 @@ textarea.field-in{resize:none;height:72px;line-height:1.5}
   background:var(--bg3);border:1px solid var(--border);
   box-shadow:0 8px 24px rgba(0,0,0,.4);
   font-size:.8rem;font-weight:500;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);
   display:flex;align-items:center;gap:10px;
-  animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) both;
+  animation:toastIn .3s ease;
 }
-@keyframes toastIn{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
-.toast.out{animation:toastOut .3s ease forwards}
-@keyframes toastOut{to{transform:translateX(40px);opacity:0}}
-.toast-ico{font-size:1rem}
+@keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.out{transform:translateX(110%);opacity:0}
+.toast-ico{font-size:1.1rem}
+
+/* ── SCAN OVERLAY ── */
+#scanOverlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+#scanOverlay.open{display:flex;animation:fadeIn .4s ease}
+.scan-spinner{width:60px;height:60px;border:4px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+.scan-msg{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--text);letter-spacing:1px}
+.scan-progress{width:300px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.scan-bar{height:100%;width:0%;background:var(--accent);transition:width .1s}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.grid-header{
+  padding:14px 20px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.grid-title{font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:8px}
+.grid-title i{color:var(--text3);font-style:normal;font-weight:500;font-size:.75rem}
 
 /* Kbd shortcut hint */
 .kbd{display:inline-block;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--text3)}
@@ -461,6 +477,7 @@ textarea.field-in{resize:none;height:72px;line-height:1.5}
 
     <!-- VIEW: queries / security / performance / compliance (all show query grid) -->
     <div id="view-queries" class="view-panel" style="display:none;flex:1;overflow:hidden;flex-direction:column">
+      <div id="gridHeader" class="grid-header"></div>
       <div id="queryGrid" class="queries-scroll" style="flex:1"></div>
     </div>
 
@@ -602,6 +619,15 @@ textarea.field-in{resize:none;height:72px;line-height:1.5}
 
 </div><!-- .app -->
 
+<div id="scanOverlay">
+  <div class="scan-spinner"></div>
+  <div class="scan-msg">AUDITING SQL STREAM...</div>
+  <div class="scan-progress"><div id="scanBar" class="scan-bar"></div></div>
+  <div id="scanTarget" style="font-size:.7rem;color:var(--text3);font-family:monospace">Initializing Engine...</div>
+</div>
+
+<div id="toasts"></div>
+
 <!-- ══ MODAL ══ -->
 <div id="modal">
   <div class="modal-box">
@@ -622,10 +648,8 @@ textarea.field-in{resize:none;height:72px;line-height:1.5}
   </div>
 </div>
 
-<div id="toasts"></div>
-
 <script>
-let chart, rH=[0], sL=['0'], epN=0, termOpen=false;
+let chart, rH=[0], sL=['0'], epN=0, termOpen=false, curObs=null, curV='dashboard';
 const PHASES=['scanning','optimizing','compliance','reporting'];
 const NAV_LABELS={task_easy:'Security Scan',task_medium:'Performance Audit',task_hard:'Enterprise Pipeline'};
 
@@ -650,11 +674,11 @@ async function resetEnv(){
     document.getElementById('sReward').textContent='0.000';
     document.getElementById('sSteps').textContent=`0/${d.max_steps}`;
     document.getElementById('sPhasePill').textContent=d.phase.toUpperCase();
-    document.getElementById('taskLabel').textContent=NAV_LABELS[tid]||tid;
     document.getElementById('sbEp').textContent=`EP_${String(epN).padStart(3,'0')}`;
     document.getElementById('sbPhase').textContent=`Phase: ${d.phase}`;
     rH=[0];sL=['0'];chart.data.labels=sL;chart.data.datasets[0].data=rH;chart.update('none');
     renderPhase(d.phase);renderQueries(d);renderSchema(d.schema_info);
+    curObs=d;
     log('SYS',`Episode ${epN} initialized · ${tid}`);
     toast('✅ Episode initialized','#22c55e');
   }catch(e){log('ERR',e.message,'ERR');toast('❌ Reset failed','#ef4444');}
@@ -667,6 +691,7 @@ async function stepEnv(){
   try{
     const p={action_type:type,query_index:parseInt(document.getElementById('queryIdx').value)||0,severity:document.getElementById('severity').value,finding:document.getElementById('findingTxt').value,rewritten_sql:document.getElementById('sqlTxt').value,reasoning:'Manual',report_summary:type==='submit_report'?document.getElementById('findingTxt').value:null};
     const d=await api('/step',p);const obs=d.observation;
+    curObs=obs;
     rH.push(obs.score_so_far);sL.push(obs.step.toString());chart.data.labels=sL;chart.data.datasets[0].data=rH;chart.update();
     const rv=obs.score_so_far.toFixed(3);
     document.getElementById('sReward').textContent=rv;
@@ -677,7 +702,6 @@ async function stepEnv(){
     if(pos) findingsCount++;
     document.getElementById('lastResp').innerHTML=`<span style="color:${pos?'#34d399':'#f43f5e'};font-size:1rem;font-weight:800">${pos?'+':''}${d.reward.value.toFixed(4)}</span>  <span style="color:var(--text3)">step ${obs.step}${d.done?' · <span style="color:#f43f5e">DONE</span>':''}</span>`;
     renderPhase(obs.phase);renderQueries(obs);
-    // update report log
     const rl=document.getElementById('reportLog');
     if(rl){rl.innerHTML+=`<div style="padding:4px 0;border-bottom:1px solid var(--border)">[${new Date().toLocaleTimeString()}] ${type} idx=${p.query_index} → ${pos?'+':''}${d.reward.value.toFixed(4)}</div>`;}
     if(type==='submit_report'){const rc=document.getElementById('reportContent');if(rc)rc.innerHTML=`<strong style="color:var(--text)">Report submitted at step ${obs.step}</strong><br><br>${esc(p.finding||'No summary provided.')}<br><br><span style="color:var(--green)">✅ Final score: ${rv}</span>`;}
