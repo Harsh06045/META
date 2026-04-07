@@ -817,10 +817,10 @@ function showView(view){
                        <button class="btn btn-primary" onclick="runSecurityScan()"><span style="font-size:1.1rem">📡</span> Start Automated Scan</button>`;
       } else if(view==='performance'){
         gh.innerHTML = `<div class="grid-title">⚡ Performance Optimize <i>— Bottleneck Detection</i></div>
-                       <button class="btn btn-primary" onclick="toast('ℹ️ Performance Auto-Optimizer ready.')">🚀 Optimize All</button>`;
+                       <button class="btn btn-primary" onclick="runPerformanceAudit()"><span style="font-size:1.1rem">🚀</span> Start Bottleneck Scan</button>`;
       } else if(view==='compliance'){
         gh.innerHTML = `<div class="grid-title">🔒 Compliance Guard <i>— PII & GDPR Audit</i></div>
-                       <button class="btn btn-primary" onclick="toast('🔒 Compliance scanner active.')">🛡️ Check Privacy</button>`;
+                       <button class="btn btn-primary" onclick="runComplianceScan()"><span style="font-size:1.1rem">🛡️</span> Run Compliance Audit</button>`;
       } else {
         gh.innerHTML = `<div class="grid-title">🔍 Audit Queries <i>— Live Workload Filter</i></div>`;
       }
@@ -832,49 +832,47 @@ function showView(view){
   if(view==='dashboard') refreshDashboard();
 }
 
-async function runSecurityScan(){
+async function runSecurityScan(){ await runGenericScan('SECURITY', 'Neural Security Audit', ['injection','drop table','union select']); }
+async function runPerformanceAudit(){ await runGenericScan('PERF', 'Performance Analysis', ['select *','join','cross join','full scan']); }
+async function runComplianceScan(){ await runGenericScan('COMP', 'GDPR Privacy Audit', ['email','ssn','phone','address','secret']); }
+
+async function runGenericScan(type, label, kws){
   const s = document.getElementById('scanOverlay');
   const b = document.getElementById('scanBar');
   const t = document.getElementById('scanTarget');
   s.classList.add('open');
-  log('SYS', 'Initializing Neural Security Audit Engine...', 'STEP');
+  document.querySelector('.scan-msg').textContent = label.toUpperCase() + '...';
+  log('SYS', `Initializing ${label} Engine...`, 'STEP');
   
   const cards = document.querySelectorAll('#queryGrid .query-card');
   const qs = curObs?.queries || [];
   
   for(let i=0; i<qs.length; i++){
-    const p = ((i+1)/qs.length)*100;
-    b.style.width = p+'%';
-    t.textContent = `ANALYZING BLOCK ${i}...`;
+    b.style.width = (((i+1)/qs.length)*100)+'%';
+    t.textContent = `AUDITING BLOCK ${i}...`;
     
-    // UI Interaction: Highlight card being scanned
     if(cards[i]){
       cards[i].classList.add('scanning');
       cards[i].scrollIntoView({behavior:'smooth',block:'center'});
       const badge = cards[i].querySelector('.badge');
-      if(badge) {
-        badge.textContent = 'SCANNING...';
-        badge.className = 'badge b-pend';
-      }
+      if(badge) { badge.textContent = 'SCANNING...'; badge.className = 'badge b-pend'; }
     }
     
     const sql = qs[i].toLowerCase();
-    if(sql.includes('\' or \'1\'=\'1') || sql.includes('drop table') || sql.includes('union select')){
-      log('WARN', `VULNERABILITY DETECTED [IDX:${i}]: Pattern matches SQL_INJECTION_V1`, 'WARN');
-      toast(`🚨 CRITICAL: SQL Injection Found`, '#f87171');
-      if(cards[i]) cards[i].style.borderLeft = '3px solid #f87171';
+    const hit = kws.some(k=>sql.includes(k));
+    if(hit){
+      log('WARN', `${type} HIT [IDX:${i}]: Found pattern matching ${kws.find(k=>sql.includes(k))}`, 'WARN');
+      toast(`⚠️ Issue Found in Query ${i}`, type==='SECURITY'?'#f87171':'#fbbf24');
+      if(cards[i]) cards[i].style.borderLeft = `3px solid ${type==='SECURITY'?'#f87171':'#fbbf24'}`;
     } else {
-      log('SYS', `Query ${i} integrity verified.`, 'STEP');
+      log('SYS', `Query ${i} verification passed.`, 'STEP');
     }
     
-    await new Promise(r=>setTimeout(r, 200 + Math.random()*300));
+    await new Promise(r=>setTimeout(r, 150 + Math.random()*200));
     if(cards[i]) {
       cards[i].classList.remove('scanning');
       const badge = cards[i].querySelector('.badge');
-      if(badge) {
-        badge.textContent = 'SCANNED';
-        badge.className = 'badge b-done';
-      }
+      if(badge) { badge.textContent = 'AUDITED'; badge.className = 'badge b-done'; }
     }
   }
   
