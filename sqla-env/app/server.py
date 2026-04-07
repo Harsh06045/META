@@ -770,33 +770,46 @@ function navToId(view){
 function showView(view){
   curV=view;
   document.querySelectorAll('.view-panel').forEach(p=>p.style.display='none');
-  const panel=document.getElementById('view-'+view);
-  if(panel) panel.style.display=QUERY_VIEWS.has(view)?'flex':'block';
+  
+  // MAP VIEWS TO PANELS
+  let panelId = 'view-' + view;
+  if(QUERY_VIEWS.has(view)) panelId = 'view-queries';
+  
+  const panel = document.getElementById(panelId);
+  if(panel){
+    panel.style.display = QUERY_VIEWS.has(view) ? 'flex' : 'block';
+    panel.classList.remove('view-panel');
+    void panel.offsetWidth;
+    panel.classList.add('view-panel');
+  }
+  
   document.getElementById('crumbSection').textContent=VIEW_MAP[view]||view;
   
   // sync tabs
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   const tabMap={queries:'workload',security:'workload',performance:'workload',compliance:'workload',metrics:'analytics'};
-  const tabName=tabMap[view];
-  if(tabName){const t=document.querySelector(`.tab[data-tab="${tabName}"]`);if(t)t.classList.add('active');}
+  const tName=tabMap[view];
+  if(tName){const t=document.querySelector(`.tab[data-tab="${tName}"]`);if(t)t.classList.add('active');}
   
-  // filter & header
-  if(QUERY_VIEWS.has(view)) filterQueries(view);
-  const gh = document.getElementById('gridHeader');
-  if(gh){
-    if(view==='security'){
-      gh.innerHTML = `<div class="grid-title">🛡️ Security Scan <i>— Vulnerability Audit</i></div>
-                     <button class="btn btn-primary" onclick="runSecurityScan()"><span style="font-size:1.1rem">📡</span> Start Automated Scan</button>`;
-    } else if(view==='performance'){
-      gh.innerHTML = `<div class="grid-title">⚡ Performance Optimize <i>— Bottleneck Detection</i></div>
-                     <button class="btn btn-primary" onclick="toast('ℹ️ Performance Auto-Optimizer ready.')">🚀 Optimize All</button>`;
-    } else if(view==='compliance'){
-      gh.innerHTML = `<div class="grid-title">🔒 Compliance Guard <i>— PII & GDPR Audit</i></div>
-                     <button class="btn btn-primary" onclick="toast('🔒 Compliance scanner active.')">🛡️ Check Privacy</button>`;
-    } else {
-      gh.innerHTML = `<div class="grid-title">🔍 Audit Queries <i>— Live Workload Filter</i></div>`;
+  // Update Grid Content
+  if(QUERY_VIEWS.has(view)){
+    filterQueries(view);
+    const gh = document.getElementById('gridHeader');
+    if(gh){
+      if(view==='security'){
+        gh.innerHTML = `<div class="grid-title">🛡️ Security Scan <i>— Vulnerability Audit</i></div>
+                       <button class="btn btn-primary" onclick="runSecurityScan()"><span style="font-size:1.1rem">📡</span> Start Automated Scan</button>`;
+      } else if(view==='performance'){
+        gh.innerHTML = `<div class="grid-title">⚡ Performance Optimize <i>— Bottleneck Detection</i></div>
+                       <button class="btn btn-primary" onclick="toast('ℹ️ Performance Auto-Optimizer ready.')">🚀 Optimize All</button>`;
+      } else if(view==='compliance'){
+        gh.innerHTML = `<div class="grid-title">🔒 Compliance Guard <i>— PII & GDPR Audit</i></div>
+                       <button class="btn btn-primary" onclick="toast('🔒 Compliance scanner active.')">🛡️ Check Privacy</button>`;
+      } else {
+        gh.innerHTML = `<div class="grid-title">🔍 Audit Queries <i>— Live Workload Filter</i></div>`;
+      }
+      wireRipples();
     }
-    wireRipples();
   }
   
   if(view==='metrics') refreshMetrics();
