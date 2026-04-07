@@ -1,0 +1,72 @@
+name: sqla-env
+version: "1.0.0"
+description: >
+  SQLAudit-Env: An OpenEnv environment for training and evaluating AI agents
+  on real-world SQL query auditing, security vulnerability detection, and
+  performance optimization tasks. Simulates the daily workflow of a database
+  reliability engineer reviewing production queries.
+author: sqla-env-team
+tags:
+  - openenv
+  - sql
+  - security
+  - database
+  - code-review
+  - enterprise
+tasks:
+  - id: task_easy
+    name: SQL Security Scan (Easy)
+    description: >
+      Detect SQL injection vulnerabilities and insecure patterns in a batch
+      of 5 SQL queries. Agent must identify vulnerable queries and suggest
+      parameterized replacements.
+    difficulty: easy
+    max_steps: 20
+    reward_range: [0.0, 1.0]
+  - id: task_medium
+    name: Query Performance Optimizer (Medium)
+    description: >
+      Analyze 8 slow queries from a production schema, identify N+1 patterns,
+      missing indexes, and Cartesian joins. Agent must rewrite queries and
+      justify optimizations with cost estimates.
+    difficulty: medium
+    max_steps: 30
+    reward_range: [0.0, 1.0]
+  - id: task_hard
+    name: Full Audit Pipeline (Hard)
+    description: >
+      Complete end-to-end audit of a 12-query workload: security scan,
+      performance optimization, compliance check (GDPR column exposure),
+      and generate a structured audit report with severity scores.
+    difficulty: hard
+    max_steps: 50
+    reward_range: [0.0, 1.0]
+observation_space:
+  type: object
+  properties:
+    task_id: {type: string}
+    step: {type: integer}
+    queries: {type: array, items: {type: string}}
+    schema: {type: object}
+    findings_so_far: {type: array}
+    remaining_steps: {type: integer}
+    phase: {type: string}
+action_space:
+  type: object
+  properties:
+    action_type:
+      type: string
+      enum: [scan_query, rewrite_query, flag_compliance, submit_report, skip]
+    query_index: {type: integer}
+    finding: {type: string}
+    severity: {type: string, enum: [critical, high, medium, low, info]}
+    rewritten_sql: {type: string}
+    reasoning: {type: string}
+api:
+  base_path: /
+  endpoints:
+    - POST /reset
+    - POST /step
+    - GET /state
+    - GET /tasks
+    - GET /health
