@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from app.env import SQLAEnv
 from app.models import Action
 
@@ -15,7 +15,7 @@ def health():
     return {"status": "healthy"}
 
 @app.post("/reset")
-def reset(req: Optional[ResetRequest] = None):
+def reset(req: Optional[ResetRequest] = Body(None)):
     task_id = req.task_id if req else "task_easy"
     return env.reset(task_id)
 
