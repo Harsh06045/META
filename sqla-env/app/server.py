@@ -42,9 +42,13 @@ def state(): return _env.state()
 def index():
     # Read from embedded HTML or file
     html_path = os.path.join(os.path.dirname(__file__), "sqlaudit_ui.html")
-    if os.path.exists(html_path):
-        with open(html_path) as f:
+    try:
+        with open(html_path, encoding="utf-8") as f:
             return f.read()
+    except FileNotFoundError:
+        pass
+    except FileNotFoundError:
+        pass
     # Fallback inline minimal UI
     return _INLINE_UI
 
