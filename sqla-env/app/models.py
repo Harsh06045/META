@@ -53,11 +53,13 @@ class Observation(BaseModel):
     max_steps: int
     queries: List[str]
     schema: Dict[str, SchemaTable]
+    schema_info: Optional[Dict[str, SchemaTable]] = None  # Alias for broader compatibility
     query_statuses: List[QueryStatus]
     findings_so_far: List[Finding]
     remaining_steps: int
     phase: str  # "scanning", "optimizing", "compliance", "reporting"
     score_so_far: float = 0.0
+    total_reward: float = 0.0  # Alias for compatibility
     hint: Optional[str] = None
 
     model_config = {"use_enum_values": True}

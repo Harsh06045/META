@@ -143,11 +143,13 @@ class SQLAuditEnvironment:
             max_steps=td["max_steps"],
             queries=td["queries"],
             schema=SHARED_SCHEMA,
+            schema_info=SHARED_SCHEMA,
             query_statuses=self._query_statuses,
             findings_so_far=self._findings,
             remaining_steps=td["max_steps"] - self._step_count,
             phase=self._current_phase(),
             score_so_far=round(self._episode_reward, 4),
+            total_reward=round(self._episode_reward, 4),
             hint=hint or self._phase_hint()
         )
 

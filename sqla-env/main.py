@@ -15,8 +15,10 @@ def health():
     return {"status": "healthy"}
 
 @app.post("/reset")
-def reset(req: ResetRequest = Body(default=ResetRequest())):
-    task_id = req.task_id if req else "task_easy"
+def reset(req: Optional[ResetRequest] = Body(None)):
+    task_id = "task_easy"
+    if req is not None:
+        task_id = req.task_id if req.task_id else "task_easy"
     return env.reset(task_id)
 
 @app.post("/step")

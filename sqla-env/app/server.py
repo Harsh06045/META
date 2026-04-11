@@ -20,7 +20,14 @@ class ResetRequest(BaseModel):
 
 @app.post("/reset", response_model=Observation)
 def reset(req: Optional[ResetRequest] = Body(None)):
-    task_id = req.task_id if req and req.task_id else "task_easy"
+    # Safely handle missing body or empty task_id
+    task_id = "task_easy"
+    if req is not None:
+        if hasattr(req, "task_id") and req.task_id:
+            task_id = req.task_id
+        elif isinstance(req, dict) and req.get("task_id"):
+            task_id = req["task_id"]
+    
     try:
         return _env.reset(task_id=task_id)
     except ValueError as e:
