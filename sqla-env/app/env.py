@@ -21,7 +21,7 @@ class SQLAEnv:
             task_id=self.task_data["id"],
             step=self.current_step,
             queries=self.task_data["queries"],
-            schema=self.task_data["schema"],
+            schema_info=self.task_data["schema"],
             findings_so_far=self.findings,
             remaining_steps=self.max_steps - self.current_step,
             phase="auditing"

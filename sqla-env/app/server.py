@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -19,8 +19,16 @@ class ResetRequest(BaseModel):
     task_id: str = "task_easy"
 
 @app.post("/reset", response_model=Observation)
-def reset(req: Optional[ResetRequest] = Body(None)):
-    task_id = req.task_id if req else "task_easy"
+async def reset(request: Request):
+    try:
+        body = await request.json()
+        task_id = body.get("task_id", "task_easy")
+    except:
+        task_id = "task_easy"
+    
+    if not isinstance(task_id, str):
+        task_id = "task_easy"
+
     try:
         return _env.reset(task_id=task_id)
     except ValueError as e:
@@ -32,7 +40,7 @@ def health(): return {"status": "ok", "version": "1.0.0"}
 @app.get("/tasks")
 def list_tasks(): return {tid: {"id": td["id"], "name": td["name"], "difficulty": td["difficulty"]} for tid, td in TASKS.items()}
 
-
+    
 @app.post("/step", response_model=StepResult)
 def step(action: Action):
     try: return _env.step(action)
