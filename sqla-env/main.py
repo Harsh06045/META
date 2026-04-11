@@ -15,16 +15,8 @@ def health():
     return {"status": "healthy"}
 
 @app.post("/reset")
-async def reset(request: Request):
-    try:
-        body = await request.json()
-        task_id = body.get("task_id", "task_easy")
-    except:
-        task_id = "task_easy"
-    
-    if not isinstance(task_id, str):
-        task_id = "task_easy"
-        
+def reset(req: ResetRequest = Body(default=ResetRequest())):
+    task_id = req.task_id if req else "task_easy"
     return env.reset(task_id)
 
 @app.post("/step")
