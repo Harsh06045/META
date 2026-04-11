@@ -19,8 +19,8 @@ class ResetRequest(BaseModel):
     task_id: str = "task_easy"
 
 @app.post("/reset", response_model=Observation)
-def reset(req: ResetRequest = Body(default=ResetRequest())):
-    task_id = req.task_id if req else "task_easy"
+def reset(req: Optional[ResetRequest] = Body(None)):
+    task_id = req.task_id if req and req.task_id else "task_easy"
     try:
         return _env.reset(task_id=task_id)
     except ValueError as e:

@@ -21,7 +21,7 @@ class SQLAEnv:
             task_id=self.task_data["id"],
             step=self.current_step,
             queries=self.task_data["queries"],
-            schema_info=self.task_data["schema"],
+            schema=self.task_data["schema"],
             findings_so_far=self.findings,
             remaining_steps=self.max_steps - self.current_step,
             phase="auditing"
@@ -48,7 +48,7 @@ class SQLAEnv:
         if self.current_step >= self.max_steps:
             self.done = True
 
-        return self._get_observation(), Reward(score=score, feedback=feedback), self.done, {}
+        return self._get_observation(), Reward(value=score, message=feedback), self.done, {}
 
     def _evaluate_final_report(self):
         # Implementation of full evaluation logic here

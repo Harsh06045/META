@@ -52,7 +52,7 @@ class Observation(BaseModel):
     step: int
     max_steps: int
     queries: List[str]
-    schema_info: Dict[str, SchemaTable]
+    schema: Dict[str, SchemaTable]
     query_statuses: List[QueryStatus]
     findings_so_far: List[Finding]
     remaining_steps: int
