@@ -18,17 +18,20 @@ _env = SQLAuditEnvironment()
 class ResetRequest(BaseModel):
     task_id: str = "task_easy"
 
+@app.post("/reset", response_model=Observation)
+def reset(req: Optional[ResetRequest] = None):
+    task_id = req.task_id if req else "task_easy"
+    try:
+        return _env.reset(task_id=task_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
 @app.get("/health")
 def health(): return {"status": "ok", "version": "1.0.0"}
 
 @app.get("/tasks")
 def list_tasks(): return {tid: {"id": td["id"], "name": td["name"], "difficulty": td["difficulty"]} for tid, td in TASKS.items()}
 
-@app.post("/reset", response_model=Observation)
-def reset(req: Optional[ResetRequest] = None):
-    task_id = req.task_id if req else "task_easy"
-    try: return _env.reset(task_id=task_id)
-    except ValueError as e: raise HTTPException(400, str(e))
 
 @app.post("/step", response_model=StepResult)
 def step(action: Action):
