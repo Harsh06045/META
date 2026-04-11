@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SQLAudit — Mission Control</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{
+  --bg:#080b12; --bg2:#0d121f; --bg3:#131828; --border:rgba(255,255,255,.07);
+  --accent:#3b82f6; --accent-glow:rgba(59,130,246,.2); --green:#10b981; --red:#ef4444;
+  --amber:#f59e0b; --text:#e2e8f0; --text2:#8b95a8; --text3:#475569;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;overflow:hidden}
+.app{display:grid;grid-template-rows:56px 1fr 28px;height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;background:rgba(8,11,18,.95);border-bottom:1px solid var(--border);padding:0 20px;backdrop-filter:blur(12px);z-index:100}
+.brand{display:flex;align-items:center;gap:10px;margin-right:28px}
+.brand-ico{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#1d4ed8);border-radius:8px;display:grid;place-items:center;font-size:1.1rem}
+.brand-name{font-weight:800;font-size:1rem;letter-spacing:-.5px}
+.tabs{display:flex;height:100%}
+.tab{display:flex;align-items:center;padding:0 18px;color:var(--text2);cursor:pointer;font-weight:600;border-bottom:2px solid transparent;transition:all .2s;font-size:.8rem}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.02)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--accent-glow)}
+.top-end{margin-left:auto;display:flex;gap:10px}
+
+/* ── BODY ── */
+.body{display:grid;grid-template-columns:240px 1fr 340px;overflow:hidden}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sid-sec{padding:16px 14px 8px}
+.sid-lbl{font-size:.6rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.nav-i{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;color:var(--text2);cursor:pointer;margin-bottom:2px;transition:all .2s}
+.nav-i:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-i.active{background:var(--accent-glow);color:var(--accent);font-weight:700}
+.ep-card{margin:auto 12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ep-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.ep-box{text-align:center;padding:10px;background:rgba(255,255,255,.02);border-radius:9px;border:1px solid var(--border)}
+.ep-val{font-family:'IBM Plex Mono',monospace;font-size:1.2rem;font-weight:700}
+.ep-key{font-size:.55rem;color:var(--text3);text-transform:uppercase;margin-top:4px}
+.phase-tag{text-align:center;padding:6px;border-radius:8px;font-size:.6rem;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;border:1px solid var(--border);background:rgba(59,130,246,.1);color:var(--accent)}
+
+/* Main Viewport */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.main-bar{display:flex;align-items:center;padding:12px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.crumb{font-size:.85rem;color:var(--text3)}
+.scroll{flex:1;overflow-y:auto;padding:16px}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border)}
+
+/* 🟢 Query Cards */
+.q-grid{display:flex;flex-direction:column;gap:10px}
+.q-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.q-card.active{border-color:var(--accent);background:var(--accent-glow)}
+.q-card.scanning{animation:scanPulse 1.5s ease-in-out infinite;border-color:var(--accent)}
+@keyframes scanPulse{0%,100%{box-shadow:0 0 5px var(--accent-glow)}50%{box-shadow:0 0 25px var(--accent-glow);background:rgba(59,130,246,.08)}}
+.q-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.q-body{padding:16px 18px;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text2);line-height:1.6}
+.badge{padding:2px 8px;border-radius:6px;font-size:.58rem;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+.b-pend{background:rgba(255,255,255,.05);color:var(--text3)}
+.b-done{background:rgba(16,185,129,.1);color:var(--green)}
+
+/* Action Console */
+.panel{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.pan-h{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.pan-scr{padding:16px;flex:1;overflow-y:auto}
+.field{margin-bottom:14px}
+.f-lbl{font-size:.6rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;display:block}
+.f-in{width:100%;padding:10px 12px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-size:.85rem;outline:none;transition:all .15s}
+.f-in:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.exec{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),#1d4ed8);color:#fff;font-weight:800;font-size:.9rem;cursor:pointer;box-shadow:0 10px 25px rgba(59,130,246,.4);transition:all .2s;position:relative;overflow:hidden}
+.exec:hover{transform:translateY(-2px);box-shadow:0 15px 35px rgba(59,130,246,.5)}
+
+/* Terminal */
+.term{height:0;background:var(--bg);border-top:1px solid var(--border);transition:height .3s;display:flex;flex-direction:column;overflow:hidden}
+.term.open{height:190px}
+.term-h{padding:6px 16px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.term-stream{padding:12px 16px;overflow-y:auto;font-family:'IBM Plex Mono',monospace;font-size:.68rem;flex:1}
+.log{margin-bottom:3px;display:flex;gap:10px}
+.log-ts{color:#1e293b;width:72px}
+.log-tag{font-weight:800;width:48px}
+.SYS{color:#818cf8}.STEP{color:var(--green)}.WARN{color:var(--amber)}.ERR{color:var(--red)}
+
+.grid-h{padding:14px 20px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.grid-t{font-weight:800;font-size:.9rem}
+.kbd{background:rgba(255,255,255,.05);padding:1px 5px;border-radius:4px;border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:.6rem;color:var(--text3)}
+#scanOverlay{position:fixed;inset:0;background:rgba(8,11,18,.9);backdrop-filter:blur(10px);z-index:9000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#scanOverlay.open{display:flex}
+.scan-msg{font-family:'IBM Plex Mono',monospace;font-weight:800;font-size:1rem;letter-spacing:2px}
+.scan-bar{width:300px;height:4px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.scan-prog{height:100%;width:0;background:var(--accent);transition:width .1s}
+.toast{position:fixed;bottom:40px;right:24px;background:var(--bg3);border:1px solid var(--border);padding:12px 20px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tIn .3s ease;z-index:9999;font-weight:600;min-width:260px}
+@keyframes tIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+.toast.out{opacity:0;transition:opacity 0.3s}
+.p-done{border-color:var(--green)!important;color:var(--green)!important;background:rgba(16,185,129,.1)!important}
+.p-act{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--accent-glow)!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><div class="brand-ico">🛡️</div><div class="brand-name">SQLAudit <span style="font-weight:300">MISSION CONTROL</span></div></div>
+    <div class="tabs"><div class="tab active" onclick="showView('dashboard')">OVERVIEW</div><div class="tab" onclick="showView('queries')">AUDIT ENGINE</div><div class="tab" onclick="toggleTerminal()">KERNEL</div></div>
+    <div class="top-end">
+      <select id="taskSelect" class="f-in" style="width:180px;padding:6px 12px;margin:0" onchange="resetEnv()"><option value="task_easy">⚡ LVL 1 — Security</option><option value="task_medium">🔧 LVL 2 — Performance</option><option value="task_hard">🔥 LVL 3 — Enterprise</option></select>
+      <button class="exec" style="padding:6px 16px;box-shadow:none;margin:0;width:auto" onclick="resetEnv()">↻ RESET</button>
+    </div>
+  </div>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="sid-sec">
+        <div class="sid-lbl">Audit Console</div>
+        <div class="nav-i active" data-view="dashboard" onclick="nav(this)">🛰️ Overview</div>
+        <div class="nav-i" data-view="queries" onclick="nav(this)">🔍 Workload Grid</div>
+        <div class="sid-lbl" style="margin-top:12px">Radar Scanners</div>
+        <div class="nav-i" data-view="security" onclick="nav(this)">🛡️ Security Scan</div>
+        <div class="nav-i" data-view="performance" onclick="nav(this)">⚡ Performance</div>
+        <div class="nav-i" data-view="compliance" onclick="nav(this)">🔒 Compliance</div>
+        <div class="sid-lbl" style="margin-top:12px">Analytics</div>
+        <div class="nav-i" data-view="metrics" onclick="nav(this)">📈 Metrics</div>
+      </div>
+      <div class="ep-card">
+        <div class="ep-row"><div class="ep-box"><div id="sReward" class="ep-val" style="color:var(--green)">0.000</div><div class="ep-key">Reward</div></div><div class="ep-box"><div id="sSteps" class="ep-val" style="color:var(--accent)">0/20</div><div class="ep-key">Steps</div></div></div>
+        <div id="sPhasePill" class="phase-tag">SCANNING</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-bar">
+        <div class="crumb">AUDIT <span style="opacity:.3">/</span> <b id="crumbLabel">Overview</b></div>
+        <div class="pip-box" id="phaseTrack" style="margin-left:auto;display:flex;gap:6px"></div>
+      </div>
+
+      <div id="view-dashboard" class="view-panel scroll">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+          <div class="ep-box" style="text-align:left;padding:16px"><div class="sid-lbl">Status</div><div class="ep-val" style="color:var(--green)">● ONLINE</div><div class="ep-key">SQLAudit-Env v2.0.0</div></div>
+          <div class="ep-box" style="text-align:left;padding:16px"><div class="sid-lbl">Score</div><div id="dbReward" class="ep-val">0.000</div><div class="ep-key">Cumulative Reward</div></div>
+        </div>
+        <div class="ep-box" style="margin-top:12px;text-align:left;padding:16px;background:var(--bg3)">
+          <div class="sid-lbl">Neural Briefing</div>
+          <p style="color:var(--text2);line-height:1.7;font-size:.85rem;margin-top:8px">Welcome, Auditor. Secure the database by identifying vulnerabilities in the SQL stream. Higher accuracy yields greater rewards. Reset the environment for a fresh workload.</p>
+          <button class="exec" style="margin-top:14px;width:100%" onclick="showView('queries')">🚀 ENTER AUDIT CONSOLE</button>
+        </div>
+      </div>
+
+      <div id="view-queries" class="view-panel" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+        <div id="gridHeader" class="grid-h"></div>
+        <div id="queryGrid" class="scroll"></div>
+      </div>
+
+      <div id="view-metrics" class="view-panel scroll" style="display:none">
+        <div class="ep-box" style="height:240px;background:var(--bg3)"><div class="sid-lbl">Trajectory Graph</div><canvas id="bigChart"></canvas></div>
+      </div>
+
+      <div class="term" id="terminal"><div class="term-h"><div class="log-ts" style="width:auto">▸ KERNEL TRACE — sqlaudit@env:~</div><button onclick="toggleTerminal()" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div><div class="term-stream" id="logStream"></div></div>
+    </main>
+
+    <aside class="panel">
+      <div class="pan-h"><div class="pan-title">⚡ ACTION CONSOLE</div><span class="kbd">READY</span></div>
+      <div class="pan-scr">
+        <div class="field"><label class="f-lbl">Target Index</label><input id="queryIdx" type="number" class="f-in" value="0"/></div>
+        <div class="field"><label class="f-lbl">Action Type</label><select id="actionType" class="f-in" onchange="onAct()"><option value="scan_query">🔍 SCAN_QUERY</option><option value="rewrite_query">✏️ REWRITE_QUERY</option><option value="flag_compliance">🔒 FLAG_COMPLIANCE</option><option value="submit_report">📋 SUBMIT_REPORT</option></select></div>
+        <div class="field"><label class="f-lbl">Severity</label><select id="severity" class="f-in"><option value="info">INFO</option><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option><option value="critical">CRITICAL</option></select></div>
+        <div class="field"><label class="f-lbl">Finding Detail</label><textarea id="findingTxt" class="f-in" style="height:60px;resize:none" placeholder="Issue description..."></textarea></div>
+        <div id="sqlField" class="field" style="display:none"><label class="f-lbl">Optimized SQL</label><textarea id="sqlTxt" class="f-in" style="font-family:monospace;height:80px;resize:none" placeholder="SELECT..."></textarea></div>
+        <button id="execBtn" class="exec" onclick="stepEnv()">⚡ RUN ACTION <span class="kbd" style="background:transparent;border-color:rgba(255,255,255,.2)">↵</span></button>
+        <div id="lastResp" style="font-family:monospace;font-size:1.4rem;font-weight:900;margin-top:16px;text-align:center;color:var(--text3)">0.0000</div>
+        <div id="schemaBox" style="margin-top:16px"></div>
+      </div>
+    </aside>
+  </div>
+  <div class="statusbar" style="background:var(--accent);display:flex;align-items:center;padding:0 16px;gap:16px;color:rgba(255,255,255,.8);font-size:.65rem"><span>🛡️ SQLAudit Enterprise</span><span>·</span><span id="sbEp">EP_001</span><span>·</span><span id="sbPhase">Phase: scanning</span></div>
+</div>
+
+<div id="scanOverlay"><div class="scan-msg">NEURAL RADAR ACTIVE...</div><div class="scan-bar"><div id="scanProg" class="scan-prog"></div></div><div id="scanTarget" style="color:var(--text3);font-family:monospace;font-size:.7rem">Identifying patterns...</div></div>
+<div id="toasts" style="position:fixed;bottom:40px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px"></div>
+
+<script>
+let bigChart, rH=[0], sL=['0'], epN=1, curObs=null, curV='dashboard';
+const PHASES=['scanning','optimizing','compliance','reporting'];
+
+async function resetEnv(){
+  const tid=document.getElementById('taskSelect').value;
+  try{
+    const d=await api('/reset',{task_id:tid}); epN++; curObs=d; rH=[0]; sL=['0'];
+    document.getElementById('dbReward').textContent='0.000'; document.getElementById('sReward').textContent='0.000';
+    document.getElementById('sSteps').textContent=`0/${d.max_steps}`;
+    document.getElementById('sbEp').textContent=`EP_${String(epN).padStart(3,'0')}`;
+    renderQueries(d); renderSchema(d.schema_info); renderPhase(d.phase);
+    log('SYS', `Kernel episode ${epN} online.`, 'STEP');
+    toast('✅ Reset Complete');
+    refreshMetrics();
+  }catch(e){toast('❌ Reset Failed: '+e.message);}
+}
+
+async function stepEnv(){
+  const btn=document.getElementById('execBtn'); btn.innerHTML='⚡ EXECUTING...'; btn.disabled=true;
+  try{
+    const p={action_type:document.getElementById('actionType').value,query_index:parseInt(document.getElementById('queryIdx').value),severity:document.getElementById('severity').value,finding:document.getElementById('findingTxt').value,rewritten_sql:document.getElementById('sqlTxt').value,reasoning:'Neural Step'};
+    const d=await api('/step',p); const obs=d.observation; curObs=obs;
+    rH.push(obs.score_so_far); sL.push(obs.step.toString());
+    document.getElementById('sReward').textContent=obs.score_so_far.toFixed(3);
+    document.getElementById('dbReward').textContent=obs.score_so_far.toFixed(3);
+    document.getElementById('sSteps').textContent=`${obs.step}/${obs.max_steps}`;
+    document.getElementById('lastResp').textContent=d.reward.value.toFixed(4);
+    document.getElementById('lastResp').style.color=d.reward.value>=0?'var(--green)':'var(--red)';
+    renderQueries(obs); renderPhase(obs.phase);
+    log('STEP', `Action [${p.action_type}] result: ${d.reward.value.toFixed(4)}`, d.reward.value>=0?'STEP':'WARN');
+    refreshMetrics();
+  }catch(e){toast('❌ Action Error: '+e.message);}
+  finally{btn.innerHTML='⚡ RUN ACTION <span class="kbd" style="background:transparent;border-color:rgba(255,255,255,.2)">↵</span>'; btn.disabled=false;}
+}
+
+async function runGenericScan(type, label, kws){
+  const s=document.getElementById('scanOverlay'); s.classList.add('open');
+  const b=document.getElementById('scanProg'); const t=document.getElementById('scanTarget');
+  const qs=curObs?.queries||[]; const cards=document.querySelectorAll('.q-card');
+  log('SYS', `Initializing ${label} Engine...`, 'STEP');
+  for(let i=0; i<qs.length; i++){
+    b.style.width=`${((i+1)/qs.length)*100}%`; t.textContent=`AUDITING ADDR 0x${i.toString(16).toUpperCase()}...`;
+    if(cards[i]){ cards[i].classList.add('scanning'); cards[i].scrollIntoView({behavior:'smooth',block:'center'}); }
+    const hit=kws.some(k=>qs[i].toLowerCase().includes(k));
+    if(hit) {
+        log('WARN', `${type} HIT: Block ${i} pattern match found.`, 'WARN');
+        if(cards[i]) cards[i].style.borderColor = 'var(--amber)';
+    }
+    await new Promise(r=>setTimeout(r, 400 + Math.random()*400));
+    if(cards[i]) cards[i].classList.remove('scanning');
+  }
+  s.classList.remove('open'); toast(`✅ ${label} Complete`);
+}
+
+function renderQueries(obs){
+  const sel=parseInt(document.getElementById('queryIdx').value);
+  document.getElementById('queryGrid').innerHTML=obs.queries.map((q,i)=>`<div class="q-card ${i===sel?'active':''} ${obs.query_statuses[i]!=='pending'?'done':''}" onclick="pickQ(${i})"><div class="q-head"><span class="q-id">ID:0x${i.toString(16).toUpperCase()}</span><span class="badge ${obs.query_statuses[i]!=='pending'?'b-done':'b-pend'}">${obs.query_statuses[i]}</span></div><div class="q-body">${esc(q)}</div></div>`).join('');
+}
+
+function renderPhase(cur){
+  const idx=PHASES.indexOf(cur);
+  document.getElementById('phaseTrack').innerHTML=PHASES.map((p,i)=>{
+      let c = 'pip kbd ';
+      if (p===cur) c+='p-act';
+      else if (i<idx) c+='p-done';
+      return `<div class="${c}">${p.substring(0,4)}</div>`
+  }).join('');
+  document.getElementById('sPhasePill').textContent=cur.toUpperCase();
+  document.getElementById('sbPhase').textContent=`Phase: ${cur}`;
+}
+
+function renderSchema(s){ if(!s)return; document.getElementById('schemaBox').innerHTML='<div class="sid-lbl">Schema Mapping</div>'+Object.entries(s).map(([n,t])=>`<div style="font-size:.7rem;margin-bottom:4px;display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.02);padding-bottom:4px"><span><span style="color:var(--text3)">📦</span> ${n}</span><span style="color:var(--text3)">${t.row_estimate||0} r</span></div>`).join(''); }
+function nav(el){ document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('active')); el.classList.add('active'); showView(el.dataset.view); }
+function navToId(id){ const el=document.querySelector(`.nav-i[data-view="${id}"]`); if(el) nav(el); }
+function showView(view){
+  curV=view; document.querySelectorAll('.view-panel').forEach(p=>p.style.display='none');
+  const gh=document.getElementById('gridHeader');
+  
+  // Tab syncing
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if (view === 'dashboard') document.querySelectorAll('.tab')[0].classList.add('active');
+  else if (view === 'metrics') {} // no main tab
+  else document.querySelectorAll('.tab')[1].classList.add('active');
+
+  const navMatch=document.querySelector(`.nav-i[data-view="${view}"]`);
+  if(navMatch){
+      document.querySelectorAll('.nav-i').forEach(n=>n.classList.remove('active'));
+      navMatch.classList.add('active');
+  }
+  
+  if(view==='dashboard') document.getElementById('view-dashboard').style.display='block';
+  else if(view==='metrics') { document.getElementById('view-metrics').style.display='block'; refreshMetrics(); }
+  else {
+    document.getElementById('view-queries').style.display='flex';
+    if(view==='security') gh.innerHTML=`<div class="grid-t">🛡️ Radar Security</div><button class="exec" style="padding:6px 12px;box-shadow:none;width:auto" onclick="runGenericScan('SEC','Security Scan',['injection','union','drop','1=1'])">START SCAN</button>`;
+    else if(view==='performance') gh.innerHTML=`<div class="grid-t">⚡ Radar Performance</div><button class="exec" style="padding:6px 12px;box-shadow:none;width:auto;background:var(--amber)" onclick="runGenericScan('PERF','Performance Scan',['select *','join','like'])">AUDIT SPEED</button>`;
+    else if(view==='compliance') gh.innerHTML=`<div class="grid-t">🔒 Radar Compliance</div><button class="exec" style="padding:6px 12px;box-shadow:none;width:auto;background:var(--green)" onclick="runGenericScan('COMP','Compliance Scan',['email','phone','pii'])">GUARD PII</button>`;
+    else gh.innerHTML=`<div class="grid-t">🔍 Workload Stream</div>`;
+    filterQueries(view);
+  }
+}
+
+function filterQueries(view){
+    const cards = document.querySelectorAll('.q-card');
+    cards.forEach(c => c.style.display = 'block');
+    document.getElementById('crumbLabel').textContent = view.toUpperCase();
+}
+
+async function api(path,body){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); if(!r.ok)throw new Error((await r.json()).detail || 'API Error'); return r.json();}
+function pickQ(i){document.getElementById('queryIdx').value=i; renderQueries(curObs);}
+function onAct(){const v=document.getElementById('actionType').value; document.getElementById('sqlField').style.display=v==='rewrite_query'?'block':'none';}
+function toggleTerminal(){document.getElementById('terminal').classList.toggle('open');}
+function log(tag,msg,cls='SYS'){const el=document.getElementById('logStream'); el.innerHTML+=`<div class="log"><span class="log-ts">[${new Date().toLocaleTimeString()}]</span><span class="log-tag ${cls}">${tag}</span><span class="log-msg">${msg}</span></div>`; el.scrollTop=el.scrollHeight;}
+function toast(m){const t=document.createElement('div');t.className='toast';t.innerHTML=m;document.getElementById('toasts').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},3000);}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function refreshMetrics() {
+    if (!document.getElementById('bigChart')) return;
+    const ctx = document.getElementById('bigChart').getContext('2d');
+    if (bigChart) bigChart.destroy();
+    
+    const grad = ctx.createLinearGradient(0, 0, 0, 240);
+    grad.addColorStop(0, 'rgba(59,130,246,0.5)');
+    grad.addColorStop(1, 'rgba(59,130,246,0.0)');
+    
+    bigChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: sL,
+            datasets: [{
+                label: 'Reward',
+                data: rH,
+                borderColor: '#3b82f6',
+                backgroundColor: grad,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
+    });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'r' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); resetEnv(); }
+  if (e.key === 't' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); toggleTerminal(); }
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) stepEnv();
+});
+
+window.onload=()=>{
+    resetEnv();
+};
+</script>
+</body>
+</html>

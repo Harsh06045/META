@@ -1,6 +1,11 @@
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import FastAPI
 from app.env import SQLAEnv
 from app.models import Action
+
+class ResetRequest(BaseModel):
+    task_id: str = "task_easy"
 
 app = FastAPI(title="SQLAudit-Env API")
 env = SQLAEnv()
@@ -10,7 +15,8 @@ def health():
     return {"status": "healthy"}
 
 @app.post("/reset")
-def reset(task_id: str = "task_easy"):
+def reset(req: Optional[ResetRequest] = None):
+    task_id = req.task_id if req else "task_easy"
     return env.reset(task_id)
 
 @app.post("/step")
