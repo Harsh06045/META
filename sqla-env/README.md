@@ -75,6 +75,14 @@ python -m openenv.cli validate --url https://YOUR-SPACE.hf.space
 
 The competition **`inference.py`** lives at the **repository root** (copy is also under this folder for Docker `COPY`). Configure `API_BASE_URL`, `MODEL_NAME`, `HF_TOKEN`, and `ENV_BASE_URL`, then run `python inference.py`. Reported **mean_score** and per-task scores depend on the model; re-run for your baseline table.
 
+## Troubleshooting `POST /reset` (422 “body Field required”)
+
+Production server uses **`Request` only** for `/reset` (no Pydantic body field), so empty bodies are valid. Confirm deploy with:
+
+`GET /health` → JSON must include `"reset_handler": "request-async-no-body-param-v2"`. If missing, **rebuild the Hugging Face Space** from the latest Git push (try **rebuild without cache**).
+
+From repo root: `python scripts/verify_hackathon_endpoints.py https://YOUR-SPACE.hf.space`
+
 ## OpenEnv compliance
 
 Typed Pydantic models, `step` / `reset` / `state`, `openenv.yaml`, and **`pyproject.toml` + `uv.lock`** for `openenv validate` multi-mode readiness.

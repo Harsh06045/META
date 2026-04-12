@@ -4,6 +4,7 @@ FROM python:3.11-slim
 
 LABEL space.sdk="docker"
 LABEL space.tags="openenv,sql,security,database,rl"
+LABEL sqla.reset_handler="request-async-no-body-param-v2"
 
 WORKDIR /app
 

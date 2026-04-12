@@ -47,3 +47,13 @@ The environment includes **`sqla-env/pyproject.toml`** and **`sqla-env/uv.lock`*
 ## Resource notes
 
 Image is **Python 3.11 slim** with modest dependencies; fits **2 vCPU / 8 GB** when the LLM is external (API calls only).
+
+## Troubleshooting: `422` on `POST /reset` (`body` / `Field required`)
+
+The API implements **`POST /reset` without a Pydantic body parameter** (raw `Request` only), so **empty POST bodies never trigger** that validation error. After deploy, **`GET /health`** must include **`reset_handler": "request-async-no-body-param-v2"`**. If it does not, the Space is still running an **old image** — push the latest commit and **rebuild the Space** (prefer **rebuild without cache**).
+
+Verify locally or against your Space:
+
+```bash
+python scripts/verify_hackathon_endpoints.py https://YOUR-SPACE.hf.space
+```
