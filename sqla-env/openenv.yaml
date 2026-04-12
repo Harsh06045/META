@@ -64,9 +64,6 @@ action_space:
     reasoning: {type: string}
 api:
   base_path: /
-  endpoints:
-    - POST /reset
-    - POST /step
-    - GET /state
-    - GET /tasks
-    - GET /health
+  SET: /reset
+  POST: /step
+  GET: /state

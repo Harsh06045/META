@@ -4,29 +4,36 @@ inference.py — SQLAudit-Env baseline inference script.
 Uses OpenAI client to run an LLM agent against all 3 tasks.
 Emits structured [START] / [STEP] / [END] logs to stdout.
 
-Required env vars:
+Required env vars (HF submission):
   API_BASE_URL   LLM API endpoint (OpenAI-compatible)
   MODEL_NAME     Model identifier
-  HF_TOKEN       API key (used as Bearer token)
-  ENV_BASE_URL   OpenEnv HTTP base (e.g. http://localhost:7860); required, no default
+  HF_TOKEN       Hugging Face / API key (OpenAI client api_key)
+  ENV_BASE_URL   OpenEnv HTTP base URL (the Space serving step/reset/state)
+
+Optional:
+  INFERENCE_MAX_SECONDS  Wall-clock budget for entire run (default 1080, under 20min cap)
+  LOCAL_IMAGE_NAME       If using from_docker_image() workflows
 """
 from __future__ import annotations
 import os
 import json
+import re
 import sys
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 from openai import OpenAI
 
-# ─── Config ──────────────────────────────────────────────────────────────────
+# ─── Config (defaults only where allowed: API_BASE_URL, MODEL_NAME) ───────────
 
 API_BASE_URL = os.getenv("API_BASE_URL", "<your-active-endpoint>")
 MODEL_NAME = os.getenv("MODEL_NAME", "<your-active-model>")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-ENV_BASE = os.getenv("ENV_BASE_URL")
+ENV_BASE = os.getenv("ENV_BASE_URL") or os.getenv("OPENENV_BASE_URL")
+
+INFERENCE_MAX_SECONDS = float(os.getenv("INFERENCE_MAX_SECONDS", "1080"))
 
 client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
@@ -106,18 +113,23 @@ Output JSON action only."""
 
 # ─── Agent loop ───────────────────────────────────────────────────────────────
 
-def run_agent(task_id: str) -> Dict[str, Any]:
+def run_agent(task_id: str, deadline: Optional[float] = None) -> Dict[str, Any]:
     obs = env_reset(task_id)
     total_reward = 0.0
     steps_taken = 0
-    actions_log = []
+    actions_log: List[Dict[str, Any]] = []
     max_steps = obs.get("max_steps", 30)
 
     for step in range(1, max_steps + 1):
-        # Build prompt
+        if deadline is not None and time.monotonic() >= deadline:
+            print(
+                f"[STEP] task_id={task_id} step={step} error=TIME_BUDGET_EXCEEDED reward=0.0 done=false",
+                flush=True,
+            )
+            break
+
         user_msg = build_user_prompt(obs, step)
 
-        # LLM call
         try:
             response = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -125,22 +137,22 @@ def run_agent(task_id: str) -> Dict[str, Any]:
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_msg},
                 ],
-                temperature=0.2,
+                temperature=0,
                 max_tokens=800,
             )
             raw = response.choices[0].message.content.strip()
         except Exception as e:
-            print(f"[STEP] task={task_id} step={step} error=LLM_CALL_FAILED detail={e}", flush=True)
+            print(
+                f"[STEP] task_id={task_id} step={step} error=LLM_CALL_FAILED detail={e} reward=0.0 done=false",
+                flush=True,
+            )
             break
 
-        # Parse action
         try:
             clean = raw.replace("```json", "").replace("```", "").strip()
             action_dict = json.loads(clean)
         except json.JSONDecodeError:
-            # Attempt to extract first JSON blob
-            import re
-            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            match = re.search(r"\{.*\}", raw, re.DOTALL)
             if match:
                 try:
                     action_dict = json.loads(match.group())
@@ -149,11 +161,13 @@ def run_agent(task_id: str) -> Dict[str, Any]:
             else:
                 action_dict = {"action_type": "skip"}
 
-        # Step environment
         try:
             result = env_step(action_dict)
         except Exception as e:
-            print(f"[STEP] task={task_id} step={step} error=ENV_STEP_FAILED detail={e}", flush=True)
+            print(
+                f"[STEP] task_id={task_id} step={step} error=ENV_STEP_FAILED detail={e} reward=0.0 done=false",
+                flush=True,
+            )
             break
 
         reward = result.get("reward", {}).get("value", 0.0)
@@ -169,13 +183,15 @@ def run_agent(task_id: str) -> Dict[str, Any]:
             "reward": reward,
         })
 
-        # Emit [STEP] log
-        print(f"[STEP] task_id={task_id} step={step} action_type={action_dict.get('action_type')} reward={round(reward, 4)} done={done}", flush=True)
+        print(
+            f"[STEP] task_id={task_id} step={step} action_type={action_dict.get('action_type')} "
+            f"reward={round(reward, 4)} done={done}",
+            flush=True,
+        )
 
         if done:
             break
 
-    # Final state
     try:
         final_state = env_state()
         final_score = final_state.get("episode_reward", total_reward)
@@ -191,26 +207,52 @@ def run_agent(task_id: str) -> Dict[str, Any]:
     }
 
 
-# ─── Main ────────────────────────────────────────────────────────────────────
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
-def main():
+def main() -> int:
+    if not HF_TOKEN:
+        print("[FATAL] HF_TOKEN is required for the OpenAI client.", file=sys.stderr)
+        return 1
     if not ENV_BASE:
-        print("[FATAL] Set ENV_BASE_URL to the OpenEnv HTTP base (e.g. http://localhost:7860).", file=sys.stderr)
-        sys.exit(1)
-    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    print(f"[START] event=GLOBAL_START model={MODEL_NAME} api_base={API_BASE_URL} timestamp={timestamp}", flush=True)
+        print(
+            "[FATAL] Set ENV_BASE_URL (or OPENENV_BASE_URL) to the OpenEnv HTTP base URL.",
+            file=sys.stderr,
+        )
+        return 1
 
-    results = {}
+    deadline = time.monotonic() + INFERENCE_MAX_SECONDS
+    timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    print(
+        f"[START] event=GLOBAL_START model={MODEL_NAME} api_base={API_BASE_URL} timestamp={timestamp}",
+        flush=True,
+    )
+
+    results: Dict[str, Any] = {}
     for task_id in TASKS:
+        if time.monotonic() >= deadline:
+            print(f"[STEP] task_id={task_id} step=0 error=TIME_BUDGET_EXCEEDED reward=0.0 done=false", flush=True)
+            results[task_id] = {
+                "task_id": task_id,
+                "steps_taken": 0,
+                "final_score": 0.0,
+                "total_reward": 0.0,
+                "actions": [],
+            }
+            print(f"[END] task_id={task_id} score=0.0 steps=0 elapsed_seconds=0.0", flush=True)
+            continue
+
         print(f"[START] event=TASK_START task_id={task_id}", flush=True)
         t0 = time.time()
-        result = run_agent(task_id)
+        result = run_agent(task_id, deadline=deadline)
         elapsed = round(time.time() - t0, 2)
         results[task_id] = result
 
-        print(f"[END] task_id={task_id} score={result['final_score']} steps={result['steps_taken']} elapsed_seconds={elapsed}", flush=True)
+        print(
+            f"[END] task_id={task_id} score={result['final_score']} steps={result['steps_taken']} "
+            f"elapsed_seconds={elapsed}",
+            flush=True,
+        )
 
-    # Overall summary
     scores = [r["final_score"] for r in results.values()]
     mean_score = round(sum(scores) / len(scores), 4) if scores else 0.0
 
