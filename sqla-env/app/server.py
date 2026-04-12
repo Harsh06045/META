@@ -2,7 +2,7 @@
 from __future__ import annotations
 import os
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -19,8 +19,8 @@ class ResetRequest(BaseModel):
     task_id: str = "task_easy"
 
 @app.post("/reset", response_model=Observation)
-def reset(req: Optional[ResetRequest] = Body(None)):
-    # Safely handle missing body or empty task_id
+def reset(req: Optional[ResetRequest] = None):
+    # Optional JSON body: harness may POST with no body (OpenEnv reset check).
     task_id = "task_easy"
     if req is not None:
         if hasattr(req, "task_id") and req.task_id:
