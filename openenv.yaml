@@ -45,12 +45,19 @@ observation_space:
   type: object
   properties:
     task_id: {type: string}
+    task_name: {type: string}
     step: {type: integer}
+    max_steps: {type: integer}
     queries: {type: array, items: {type: string}}
     schema: {type: object}
+    schema_info: {type: object}
+    query_statuses: {type: array, items: {type: string}}
     findings_so_far: {type: array}
     remaining_steps: {type: integer}
     phase: {type: string}
+    score_so_far: {type: number}
+    total_reward: {type: number}
+    hint: {type: string}
 action_space:
   type: object
   properties:

@@ -49,6 +49,7 @@ class SchemaTable(BaseModel):
 
 class Observation(BaseModel):
     task_id: str
+    task_name: Optional[str] = None
     step: int
     max_steps: int
     queries: List[str]

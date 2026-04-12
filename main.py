@@ -33,7 +33,7 @@ async def reset(request: Request):
         try:
             data = json.loads(raw.decode("utf-8"))
             if isinstance(data, dict):
-                tid = data.get("task_id")
+                tid = data.get("task_id") or data.get("task_name") or data.get("task")
                 if tid:
                     task_id = str(tid).strip()
         except:

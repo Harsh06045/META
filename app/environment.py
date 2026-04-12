@@ -139,6 +139,7 @@ class SQLAuditEnvironment:
         td = self._task_def
         return Observation(
             task_id=self._task_id,
+            task_name=self._task_id,
             step=self._step_count,
             max_steps=td["max_steps"],
             queries=td["queries"],
