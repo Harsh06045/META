@@ -1,11 +1,10 @@
 """SQLAudit-Env: FastAPI Server — Updated with advanced UI"""
 from __future__ import annotations
+import json
 import os
-from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
 import uvicorn
 from app.models import Action, Observation, StepResult, EnvironmentState
 from app.environment import SQLAuditEnvironment
@@ -15,19 +14,19 @@ app = FastAPI(title="SQLAudit-Env", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 _env = SQLAuditEnvironment()
 
-class ResetRequest(BaseModel):
-    task_id: str = "task_easy"
 
 @app.post("/reset", response_model=Observation)
-def reset(req: Optional[ResetRequest] = None):
-    # Optional JSON body: harness may POST with no body (OpenEnv reset check).
+async def reset(request: Request):
+    """Harness may POST with no body; FastAPI+Pydantic otherwise 422 on missing body."""
     task_id = "task_easy"
-    if req is not None:
-        if hasattr(req, "task_id") and req.task_id:
-            task_id = req.task_id
-        elif isinstance(req, dict) and req.get("task_id"):
-            task_id = req["task_id"]
-    
+    raw = await request.body()
+    if raw:
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            if isinstance(data, dict) and data.get("task_id"):
+                task_id = str(data["task_id"])
+        except (json.JSONDecodeError, UnicodeDecodeError, TypeError):
+            pass
     try:
         return _env.reset(task_id=task_id)
     except ValueError as e:
