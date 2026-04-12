@@ -22,7 +22,7 @@ class SQLAEnv:
             step=self.current_step,
             max_steps=self.max_steps,
             queries=self.task_data["queries"],
-            schema=self.task_data["schema"],
+            sql_schema=self.task_data["schema"],
             schema_info=self.task_data["schema"],
             query_statuses=["pending"] * len(self.task_data["queries"]),
             findings_so_far=self.findings,

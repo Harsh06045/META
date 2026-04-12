@@ -42,6 +42,8 @@ python -m openenv.cli validate .
 python -m openenv.cli validate --url https://YOUR-SPACE.hf.space
 ```
 
+The environment includes **`sqla-env/pyproject.toml`** and **`sqla-env/uv.lock`** so local validation reports **multi-mode deployment** readiness (Docker, `uv run server`, etc.).
+
 ## Resource notes
 
 Image is **Python 3.11 slim** with modest dependencies; fits **2 vCPU / 8 GB** when the LLM is external (API calls only).

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqla-env"
+version = "1.0.0"
+description = "SQLAudit-Env — OpenEnv SQL security / performance / compliance auditing"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openenv-core[core]>=0.2.2",
+    "fastapi==0.115.5",
+    "uvicorn[standard]>=0.35.0",
+    "pydantic>=2.11.7",
+    "openai>=2.7.2",
+    "requests==2.32.3",
+    "python-multipart==0.0.20",
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==7.4.3"]
+
+[project.scripts]
+server = "server.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "server*"]

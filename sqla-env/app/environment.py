@@ -142,7 +142,7 @@ class SQLAuditEnvironment:
             step=self._step_count,
             max_steps=td["max_steps"],
             queries=td["queries"],
-            schema=SHARED_SCHEMA,
+            sql_schema=SHARED_SCHEMA,
             schema_info=SHARED_SCHEMA,
             query_statuses=self._query_statuses,
             findings_so_far=self._findings,

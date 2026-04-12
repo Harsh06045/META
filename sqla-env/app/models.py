@@ -3,7 +3,7 @@ SQLAudit-Env: Typed Pydantic models for OpenEnv spec compliance.
 """
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from enum import Enum
 
 
@@ -52,7 +52,8 @@ class Observation(BaseModel):
     step: int
     max_steps: int
     queries: List[str]
-    schema: Dict[str, SchemaTable]
+    # Python name avoids shadowing BaseModel.schema; JSON field remains "schema"
+    sql_schema: Dict[str, SchemaTable] = Field(..., alias="schema")
     schema_info: Optional[Dict[str, SchemaTable]] = None  # Alias for broader compatibility
     query_statuses: List[QueryStatus]
     findings_so_far: List[Finding]
@@ -62,7 +63,7 @@ class Observation(BaseModel):
     total_reward: float = 0.0  # Alias for compatibility
     hint: Optional[str] = None
 
-    model_config = {"use_enum_values": True}
+    model_config = ConfigDict(use_enum_values=True, populate_by_name=True)
 
 
 class Action(BaseModel):

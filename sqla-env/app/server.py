@@ -70,6 +70,10 @@ _INLINE_UI = """<!DOCTYPE html>
 <p>API is running. Visit <a href="/docs" style="color:#3b82f6">/docs</a> for the Swagger UI.</p>
 </body></html>"""
 
-if __name__ == "__main__":
+def main() -> None:
     port = int(os.getenv("PORT", 7860))
     uvicorn.run("app.server:app", host="0.0.0.0", port=port, reload=False)
+
+
+if __name__ == "__main__":
+    main()
