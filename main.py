@@ -56,7 +56,20 @@ def list_tasks():
     return {tid: {"id": td["id"], "name": td["name"], "difficulty": td["difficulty"]} for tid, td in TASKS.items()}
 
 @app.post("/step", response_model=StepResult)
-def step(action: Action):
+@app.post("/step/", response_model=StepResult, include_in_schema=False)
+async def step(request: Request):
+    """
+    Handles POST /step. Robust to missing/malformed body to avoid 422.
+    """
+    raw = await request.body()
+    if not raw:
+        raise HTTPException(400, "Action body is required for /step")
+    try:
+        data = json.loads(raw.decode("utf-8"))
+        action = Action(**data)
+    except Exception as e:
+        raise HTTPException(400, f"Invalid Action body: {str(e)}")
+    
     try: 
         return _env.step(action)
     except RuntimeError as e: 
