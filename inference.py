@@ -8,6 +8,7 @@ Required env vars:
   API_BASE_URL   LLM API endpoint (OpenAI-compatible)
   MODEL_NAME     Model identifier
   HF_TOKEN       API key (used as Bearer token)
+  ENV_BASE_URL   OpenEnv HTTP base (e.g. http://localhost:7860); required, no default
 """
 from __future__ import annotations
 import os
@@ -25,7 +26,7 @@ API_BASE_URL = os.getenv("API_BASE_URL", "<your-active-endpoint>")
 MODEL_NAME = os.getenv("MODEL_NAME", "<your-active-model>")
 HF_TOKEN = os.getenv("HF_TOKEN")
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
-ENV_BASE = os.environ.get("ENV_BASE_URL", "http://localhost:7860")
+ENV_BASE = os.getenv("ENV_BASE_URL")
 
 client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
@@ -193,6 +194,9 @@ def run_agent(task_id: str) -> Dict[str, Any]:
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 def main():
+    if not ENV_BASE:
+        print("[FATAL] Set ENV_BASE_URL to the OpenEnv HTTP base (e.g. http://localhost:7860).", file=sys.stderr)
+        sys.exit(1)
     timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     print(f"[START] event=GLOBAL_START model={MODEL_NAME} api_base={API_BASE_URL} timestamp={timestamp}", flush=True)
 
