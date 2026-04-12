@@ -100,7 +100,7 @@ body{height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',san
 <body>
 <div class="app">
   <div class="topbar">
-    <div class="brand"><div class="brand-ico">🛡️</div><div class="brand-name">SQLAudit <span style="font-weight:300">MISSION CONTROL</span></div></div>
+    <div class="brand"><div class="brand-ico">🎮</div><div class="brand-name">OpenEnv <span style="font-weight:300">MINI-GAME</span></div></div>
     <div class="tabs"><div class="tab active" onclick="showView('dashboard')">OVERVIEW</div><div class="tab" onclick="showView('queries')">AUDIT ENGINE</div><div class="tab" onclick="toggleTerminal()">KERNEL</div></div>
     <div class="top-end">
       <select id="taskSelect" class="f-in" style="width:180px;padding:6px 12px;margin:0" onchange="resetEnv()"><option value="task_easy">⚡ LVL 1 — Security</option><option value="task_medium">🔧 LVL 2 — Performance</option><option value="task_hard">🔥 LVL 3 — Enterprise</option></select>
@@ -139,9 +139,16 @@ body{height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',san
           <div class="ep-box" style="text-align:left;padding:16px"><div class="sid-lbl">Score</div><div id="dbReward" class="ep-val">0.000</div><div class="ep-key">Cumulative Reward</div></div>
         </div>
         <div class="ep-box" style="margin-top:12px;text-align:left;padding:16px;background:var(--bg3)">
-          <div class="sid-lbl">Neural Briefing</div>
-          <p style="color:var(--text2);line-height:1.7;font-size:.85rem;margin-top:8px">Welcome, Auditor. Secure the database by identifying vulnerabilities in the SQL stream. Higher accuracy yields greater rewards. Reset the environment for a fresh workload.</p>
-          <button class="exec" style="margin-top:14px;width:100%" onclick="showView('queries')">🚀 ENTER AUDIT CONSOLE</button>
+          <div class="sid-lbl">Project Mission</div>
+          <p style="color:var(--text);font-weight:700;font-size:1rem;margin-top:8px;line-height:1.4">"Build a mini-game RL environment with clearly defined tasks, automated graders, and reward logic using the OpenEnv framework."</p>
+          <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text2)"><span style="color:var(--accent)">→</span> Create a mini-game an AI agent can play</div>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text2)"><span style="color:var(--accent)">→</span> Define tasks with increasing difficulty</div>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text2)"><span style="color:var(--accent)">→</span> Write graders that verify task completion</div>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text2)"><span style="color:var(--accent)">→</span> Define reward logic for scoring</div>
+            <div style="display:flex;align-items:center;gap:10px;color:var(--text2)"><span style="color:var(--accent)">→</span> Package using OpenEnv for automated evaluation</div>
+          </div>
+          <button class="exec" style="margin-top:24px;width:100%" onclick="showView('queries')">🚀 ENTER MISSION CONTROL</button>
         </div>
       </div>
 
@@ -171,7 +178,7 @@ body{height:100vh;background:var(--bg);color:var(--text);font-family:'Inter',san
       </div>
     </aside>
   </div>
-  <div class="statusbar" style="background:var(--accent);display:flex;align-items:center;padding:0 16px;gap:16px;color:rgba(255,255,255,.8);font-size:.65rem"><span>🛡️ SQLAudit Enterprise</span><span>·</span><span id="sbEp">EP_001</span><span>·</span><span id="sbPhase">Phase: scanning</span></div>
+  <div class="statusbar" style="background:var(--accent);display:flex;align-items:center;padding:0 16px;gap:16px;color:rgba(255,255,255,.8);font-size:.65rem"><span>🛡️ OpenEnv Mini-Game Engine</span><span>·</span><span id="sbEp">EP_001</span><span>·</span><span id="sbPhase">Phase: scanning</span></div>
 </div>
 
 <div id="scanOverlay"><div class="scan-msg">NEURAL RADAR ACTIVE...</div><div class="scan-bar"><div id="scanProg" class="scan-prog"></div></div><div id="scanTarget" style="color:var(--text3);font-family:monospace;font-size:.7rem">Identifying patterns...</div></div>
