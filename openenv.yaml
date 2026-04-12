@@ -45,7 +45,6 @@ observation_space:
   type: object
   properties:
     task_id: {type: string}
-    task_name: {type: string}
     step: {type: integer}
     max_steps: {type: integer}
     queries: {type: array, items: {type: string}}
@@ -56,8 +55,6 @@ observation_space:
     remaining_steps: {type: integer}
     phase: {type: string}
     score_so_far: {type: number}
-    total_reward: {type: number}
-    hint: {type: string}
 action_space:
   type: object
   properties:
@@ -71,6 +68,6 @@ action_space:
     reasoning: {type: string}
 api:
   base_path: /
-  SET: /reset
-  POST: /step
-  GET: /state
+  reset: /reset
+  step: /step
+  state: /state

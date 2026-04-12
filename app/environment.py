@@ -104,9 +104,10 @@ class SQLAuditEnvironment:
         obs = self._build_observation()
         self._actions_log.append({"step": self._step_count, "action": action.model_dump(), "reward": reward_value})
 
+        info["reward_details"] = reward.model_dump()
         return StepResult(
             observation=obs,
-            reward=reward,
+            reward=reward.value,
             done=self._done,
             info=info
         )
@@ -139,7 +140,6 @@ class SQLAuditEnvironment:
         td = self._task_def
         return Observation(
             task_id=self._task_id,
-            task_name=self._task_id,
             step=self._step_count,
             max_steps=td["max_steps"],
             queries=td["queries"],
@@ -149,9 +149,7 @@ class SQLAuditEnvironment:
             findings_so_far=self._findings,
             remaining_steps=td["max_steps"] - self._step_count,
             phase=self._current_phase(),
-            score_so_far=round(self._episode_reward, 4),
-            total_reward=round(self._episode_reward, 4),
-            hint=hint or self._phase_hint()
+            score_so_far=round(self._episode_reward, 4)
         )
 
     def _phase_hint(self) -> str:

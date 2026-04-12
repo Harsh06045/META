@@ -49,20 +49,16 @@ class SchemaTable(BaseModel):
 
 class Observation(BaseModel):
     task_id: str
-    task_name: Optional[str] = None
     step: int
     max_steps: int
     queries: List[str]
-    # Python name avoids shadowing BaseModel.schema; JSON field remains "schema"
     sql_schema: Dict[str, SchemaTable] = Field(..., alias="schema")
-    schema_info: Optional[Dict[str, SchemaTable]] = None  # Alias for broader compatibility
+    schema_info: Optional[Dict[str, SchemaTable]] = None
     query_statuses: List[QueryStatus]
     findings_so_far: List[Finding]
     remaining_steps: int
-    phase: str  # "scanning", "optimizing", "compliance", "reporting"
+    phase: str
     score_so_far: float = 0.0
-    total_reward: float = 0.0  # Alias for compatibility
-    hint: Optional[str] = None
 
     model_config = ConfigDict(use_enum_values=True, populate_by_name=True)
 
@@ -87,7 +83,7 @@ class Reward(BaseModel):
 
 class StepResult(BaseModel):
     observation: Observation
-    reward: Reward
+    reward: float  # Simplified to float for strict OpenEnv compatibility
     done: bool
     info: Dict[str, Any] = {}
 
